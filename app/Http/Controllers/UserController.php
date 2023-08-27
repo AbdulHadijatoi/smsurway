@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Setting;
+use App\Services\OneRouteService;
 use Throwable;
 use Carbon\Carbon;
 
@@ -33,7 +34,8 @@ class UserController extends Controller
     public function send()
     {
         $address = AddressBook::where('user_id', auth()->user()->id)->get();
-        $senderIds = auth()->user()->senderIds->sender_ids;
+        $senderIds = OneRouteService::fetchChannels();
+        // $senderIds = auth()->user()->senderIds->sender_ids;
         return view('user.send',compact('address', 'senderIds'));
     }
     

@@ -13,6 +13,7 @@ use App\Http\Controllers\GsmController;
 use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\NewsLetterController;
 use App\Http\Controllers\ResellerController;
+use App\Http\Controllers\SendSMSController;
 use App\Http\Controllers\SmsQueueProcess;
 use App\Http\Controllers\TransactionController;
 use App\Mail\WelcomeMail;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\TransactionNotificationEmail;
 use Illuminate\Http\Request;
 use App\Services\NanoBoxSMS;
+use App\Services\OneRouteService;
 
 /*
 |--------------------------------------------------------------------------
@@ -91,6 +93,11 @@ Route::post('/vas', function (Request $request) {
 });
 
 
+
+Route::get('/testRoute', function (Request $request) {
+    return OneRouteService::fetchChannels()[0];
+    // return OneRouteService::sendSMS($request->message,$request->recipients,$request->from);
+});
 Route::get('/test_sms', function () {
    
 
@@ -344,7 +351,7 @@ Route::middleware(['auth','verified','role:user'])->group(function () {
         return view('dashboard',compact('count')); 
     })->name('dashboard');
     Route::get('send', [UserController::class, 'send'])->name('send');
-    Route::post('sendMsg', [HollaTag::class, 'sendMsg'])->name('sendMsg');
+    Route::post('sendSMS', [SendSMSController::class, 'sendSMS'])->name('sendSMS');
     Route::post('msgSave', [UserController::class, 'msgSave'])->name('msgSave');
     
     Route::get('report', [UserController::class, 'report'])->name('report');

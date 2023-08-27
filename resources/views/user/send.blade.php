@@ -58,7 +58,7 @@
                                             </ul>
                                         </div>
                                     @endif
-                                    <form method="post" action="{{ route('sendMsg') }}" id="sendForm">
+                                    <form method="post" action="{{ route('sendSMS') }}" id="sendForm">
                                         {{-- @csrf --}}
                                         <input type="hidden" name="_token" value="{{ csrf_token() }}">
                                         <div class="form-row">
@@ -68,8 +68,8 @@
                                             <div class="form-group col-md-7">
                                                 <select class="form-control" id="from" name="from" required>
                                                     <option disabled selected>Please select approved IDs</option>
-                                                    @foreach ($senderIds as $id)
-                                                        <option value="{{ $id }}">{{ $id }}</option>
+                                                    @foreach ($senderIds as $channel)
+                                                        <option value="{{ $channel['id'] }}">{{ $channel['name'] }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
