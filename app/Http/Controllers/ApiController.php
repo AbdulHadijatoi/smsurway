@@ -12,16 +12,16 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\Setting;
 use App\Mail\LowBalanceNotificationEmail;
+use App\Models\GsmNetwork;
+use App\Models\GsmPrefix;
+use App\Models\ManageKeyword;
+use App\Services\OneRouteService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class ApiController extends Controller
 {
-    protected $user;
-    public $model;
-    public function __construct()
-    {
-        $this->model = new SendMsg();
-    }
+
     public function authenticate(Request $request)
     {
         $credentials = $request->only('email', 'password');
@@ -88,18 +88,17 @@ class ApiController extends Controller
         }
     }
  
-    public function get_user(Request $request)
-    {
+    public function get_user(Request $request){
         $this->validate($request, [
             'token' => 'required'
         ]);
         $user = JWTAuth::authenticate($request->token);
         return response()->json(['credit' => $user->credit]);
     }
-    public function report(Request $request)
-    {
-        $this->user = JWTAuth::parseToken()->authenticate();
-        $product = $this->user->getreport()->get()->where('msg_id',$request->msgid)->first();
+
+    public function report(Request $request){
+        $user = JWTAuth::parseToken()->authenticate();
+        $product = $user->getreport()->get()->where('msg_id',$request->msgid)->first();
         if (!$product) {
             return response()->json([
                 'success' => false,
@@ -110,24 +109,48 @@ class ApiController extends Controller
             'status' => $product->status
         ]);
     }
-    public function credit()
-    {
-        $this->user = JWTAuth::parseToken()->authenticate();
-        if (!$this->user) {
+
+    public function credit(){
+        $user = JWTAuth::parseToken()->authenticate();
+        if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Sorry, user not found.'
             ], 400);
         }
         return response()->json([
-            'credit' => $this->user->credit
+            'credit' => $user->credit
         ]);
-        return $this->user;
+        return $user;
     }
-    public function send(Request $request)
-    {
+    
+    public function fetchSenders(Request $request){
+        $senderIds = OneRouteService::fetchChannels();
+        $channels = [];
+        if($senderIds){
+            foreach ($senderIds as $sender) {
+                $tempChannel = [];
+                $tempChannel['id'] = $sender['id'];
+                $tempChannel['name'] = $sender['name'];
+                $channels[] = $tempChannel;
+            }
+        }
+
+        if(count($channels) > 0){
+            return response()->json([
+                'success' => true,
+                'senders' => $channels,
+            ], Response::HTTP_OK);
+        }else{
+            return response()->json([
+                'success' => false,
+                'senders' => [],
+            ], 422);
+        }
+    }
+    public function send(Request $request){
         // return $request->all();
-        $this->user = JWTAuth::parseToken()->authenticate();
+        $user = JWTAuth::parseToken()->authenticate();
         $credentials = $request->only('from', 'to','msg','token');
         //valid credential
         $validator = Validator::make($credentials, [
@@ -140,80 +163,55 @@ class ApiController extends Controller
         if ($validator->fails()) {
             return response()->json(['error' => $validator->messages()], 200);
         }
-        $to=$request->to;
+        $to = $request->to;
+        $from = $request->from;
+        $msg = $request->msg;
         // Demo Code
-        $count=$this->model->count_msg($request->msg);
+        $count=$this->count_msg($request->msg);
         $to = Str::of($to)->replaceMatches('/[^A-Za-z0-9]++/', ',');
-        $msg_price=$this->model->count_credit($to,$count);
+        $msg_price=$this->count_credit($to,$count);
         $credit=$msg_price['credit'];
         $to=$msg_price['send'];
         $msg_price=$msg_price['msg_price'];
-        // $this->user->credit;
-        $usercredit=$this->user->credit;
+        // $user->credit;
+        $usercredit=$user->credit;
 
         if($usercredit<$credit){
             return response()->json(['error' => $validator->messages()], 403);
         }
 
-        $response=$this->model->send_curl($request->from,$to,$request->msg);
+        SendMsg::create([
+            'from' => $from,
+            'to' => $to,
+            'msg' => $msg,
+            'user_id' => $user->id,
+            'msg_type' => 0,
+            'msg_count' => $count,
+            'msg_price' => $msg_price,
+            'sendtime' => now(),
+        ]);
 
-        if ($response && $response['status'] === true) {
-            if(isset($response['data']['smsReferences'])){
-                $refs = $response['data']['smsReferences'];
-                foreach ($refs as $ref) {
-
-                    $product = $this->user->sendmsg()->create([
-                        'to' => $to,
-                        'from' => $request->from,
-                        'msg' => $request->msg,
-                        'user_id' => $this->user->id,
-                        'msg_id' => $ref['messageId'],
-                        'msg_count' => $count,
-                        'msg_price' => $msg_price
-                    ]);
-                    //Product created, return success response
-                    if($product){
-                        $this->user->credit=$usercredit-$credit;
-                        $this->user->save();
-                    }
-                }
-            }else{
-                $product = $this->user->sendmsg()->create([
-                    'to' => $to,
-                    'from' => $request->from,
-                    'msg' => $request->msg,
-                    'user_id' => $this->user->id,
-                    'msg_id' => $response['data']['smsReference'],
-                    'msg_count' => $count,
-                    'msg_price' => $msg_price
-                ]);
-                //Product created, return success response
-                if($product){
-                    $this->user->credit=$usercredit-$credit;
-                    $this->user->save();
-                }
-            }
+        $response = OneRouteService::sendSMS($msg,$to,$from);
+        
+        if ($response['success']) {
+            $user->credit = $user->credit - $credit;
+            $user->save();
             
-            $userCredit = $this->user->credit;
-            
+            $userCredit = $user->credit;
             $low_balance = Setting::where('key', 'low_balance')->first();
             if($low_balance){
-                if($userCredit < $low_balance->value && $this->user->low_balance != 1){
+                if($userCredit < $low_balance->value && $user->low_balance != 1){
                     //send email for low balance notification
-                    Mail::to($this->user->email)->send(new LowBalanceNotificationEmail(
-                        $this->user->name
+                    Mail::to($user->email)->send(new LowBalanceNotificationEmail(
+                        $user->name
                     ));
-                    $this->user->low_balance = 1;
-                    $this->user->save();
+                    $user->low_balance = 1;
+                    $user->save();
                 }
             }
-            
             return response()->json([
                 'success' => true,
                 'message' => 'SMS created successfully',
-                'response' => [
-                    'msg_id'=>$product->id
-                ],
             ], Response::HTTP_OK);
         }else{
             return response()->json([
@@ -222,5 +220,129 @@ class ApiController extends Controller
             ], Response::HTTP_OK);
         }
 
+    }
+
+
+    public function filter_keyword($msg){
+        $msg = str_replace('.', ' ', $msg);
+        $msg_arr =explode(" ",$msg);
+        $key_arr=array();
+        $collection1 = collect($msg_arr);
+        $keyword=ManageKeyword::get('keyword');
+        foreach($keyword as $key){
+            $collect= $key->keyword;
+            array_push($key_arr,$collect);
+        }
+        $filter=$collection1->intersect($key_arr);
+        return $filter;
+    }
+    public function count_msg($msg){
+        $char=strlen($msg);
+        $count=1;
+        if ($char > 950) { return back()->with("error","You exceed maximum limited");}
+        else if ($char >= 626 && $char <= 950) {  $count=6; }
+        else if ($char >= 506 && $char <= 625) { $count=5;  } 
+        else if ($char >= 401 && $char <= 505) { $count=4;  } 
+        else if ($char >= 291 && $char <= 400) { $count=3;  } 
+        else if ($char >= 161 && $char <= 280) { $count=2;  }
+        else if ($char >= 1 && $char <= 160)   { $count=1;  }
+        else{ $count=1; }
+        return $count;
+    }
+    
+    public function count_credit($to,$count,$user_id = null){
+        $mtn=[];
+        $glo=[];
+        $airtel=[];
+        $mobile9=[];
+        $unknown=[];
+        $msg_price=[];
+        $mt=0;$gl=0;$ar=0;$m9=0;$unP=0;
+        $network=GsmPrefix::all();
+        foreach($network as $name)
+        {
+            
+            if($name->network_name=='MTN'){
+                array_push($mtn,$name->network_prefix);
+            }
+            elseif($name->network_name=='Glo'){
+                array_push($glo,$name->network_prefix);
+            }
+            elseif($name->network_name=='Airtel'){
+                
+                array_push($airtel,$name->network_prefix);
+            }
+            elseif($name->network_name=='9Mobile'){
+                array_push($mobile9,$name->network_prefix);
+            }
+            else{
+                array_push($unknown,'Unknown Network.'); 
+            }
+        }
+        if ($user_id !==null){
+            $arPrice=GsmNetwork::where('network_name','AirTel')->where('user_id', $user_id)->first()->network_price;
+            $mtPrice=GsmNetwork::where('network_name','MTN')->where('user_id', $user_id)->first()->network_price;
+            $glPrice=GsmNetwork::where('network_name','Glo')->where('user_id', $user_id)->first()->network_price;
+            $m9Price=GsmNetwork::where('network_name','9Mobile')->where('user_id', $user_id)->first()->network_price;
+            $default=GsmNetwork::where('network_name','Default')->where('user_id', $user_id)->first()->network_price;
+            // return "Here is if";
+        }
+        else{
+            $user_id = 2;
+            $mtPrice=GsmNetwork::where('network_name','MTN')->where('user_id', $user_id)->first()->network_price;
+            $glPrice=GsmNetwork::where('network_name','Glo')->where('user_id', $user_id)->first()->network_price;
+            $arPrice=GsmNetwork::where('network_name','AirTel')->where('user_id', $user_id)->first()->network_price;
+            $m9Price=GsmNetwork::where('network_name','9Mobile')->where('user_id', $user_id)->first()->network_price;
+            $default=GsmNetwork::where('network_name','Default')->where('user_id', $user_id)->first()->network_price;
+            // return "Here is else";
+            // return $user_id;
+        }
+        $setNmbr=[];
+        $to = explode(',', $to);
+        $to = array_unique($to);
+        foreach($to as $nmbr){
+            if(strlen($nmbr)>10){
+                $pre=substr($nmbr, 0, 1);
+                if($pre==0){
+                $nmbr= substr_replace($nmbr, "234", 0, 1);
+                }
+                array_push($setNmbr,$nmbr);
+                $prefix=substr($nmbr, 0, 6);
+                if(in_array($prefix, $mtn)){
+                    $mt++;
+                    // $msg_price=$msg_price*$count;
+                array_push($msg_price,$mtPrice*$count);
+                }
+                elseif(in_array($prefix, $glo)){
+                    $gl++;
+                    array_push($msg_price,$glPrice*$count);
+                }
+                elseif(in_array($prefix, $airtel)){
+                    $ar++;
+                    array_push($msg_price,$arPrice*$count);
+                }
+                elseif(in_array($prefix, $mobile9)){
+                    $m9++;
+                    array_push($msg_price,$m9Price*$count);
+                }
+                else{
+                    $unP++;
+                    array_push($msg_price,$default*$count);
+                }
+            }
+        }
+        
+        $to=$setNmbr;
+        // return $to;
+        $credit=($mt*$mtPrice+$gl*$glPrice+$ar*$arPrice+$m9*$m9Price+$unP*$default)*$count;
+        // return $arPrice;
+        // return $mt*$mtPrice*$count;
+        $to = implode(',', $to);
+        $msg_price = implode(',', $msg_price);
+        $response=[];
+        $response['send']=$to;
+        $response['msg_price']=$msg_price;
+        $response['credit']=$credit;
+        return $response;
     }
 }
