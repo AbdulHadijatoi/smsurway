@@ -31,6 +31,7 @@ use App\Mail\TransactionNotificationEmail;
 use Illuminate\Http\Request;
 use App\Services\NanoBoxSMS;
 use App\Services\OneRouteService;
+use Illuminate\Support\Facades\Log;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,9 +44,39 @@ use App\Services\OneRouteService;
 |
 */
 
+
+
+Route::post('/ordlr', function (Request $request) {
+    // Get the delivery report data from the request
+    $deliveryReport = $request->json()->all();
+
+    // Log the delivery report data
+    Log::info('SMS Delivery Report:', ['report' => $deliveryReport]);
+
+    // Add any additional processing or response as needed
+
+    return response()->json(['message' => 'Delivery report received and logged']);
+});
+
 Route::post('/vas', function (Request $request) {
         $payload = $request->json()->all();
         
+        // {
+        //     "event": "smsDeliveryReport",
+        //     "message": null,
+        //     "conversation": {
+        //         "id": "b27c3882-27f7-472e-a5f4-b4b9198f148d",
+        //         "externalId": "3932971082364335582881",
+        //         "status": "delivered",
+        //         "reason": "Message delivered to handset",
+        //         "from": "Name",
+        //         "to": "2349037234281",
+        //         "units": 0.5,
+        //         "delivered_time": "2023-08-29T08:18:31.732Z",
+        //         "createdAt": "2023-08-29T08:18:28.576Z"
+        //     }
+        // }
+
         // Extract data from the payload
         $reference = $payload['reference'];
         $deliveryDate = $payload['deliveryDate'];
