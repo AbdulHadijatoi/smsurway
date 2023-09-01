@@ -58,8 +58,8 @@ Route::post('/ordlr', function (Request $request) {
     if(!$conversation['externalId']){
         return false;
     }
-    var_dump($payload);
-    return;
+    // var_dump($payload);
+    // return;
     // Find the SendMsg record using the reference value
     $sendMsg = SendMsg::where('msg_id', $conversation['externalId'])->first();
 
