@@ -47,55 +47,62 @@ use Illuminate\Support\Facades\Log;
 
 
 Route::post('/ordlr', function (Request $request) {
-    // Get the delivery report data from the request
-    $deliveryReport = $request->json()->all();
+    $payload = $request->json()->all();
+     
+    // Extract data from the payload
+    $event = $payload['event'];
+    $message = $payload['message'];
+    $conversation = $payload['conversation'];
 
-    // Log the delivery report data
-    Log::info('SMS Delivery Report:', ['report' => $deliveryReport]);
+    
+    if(!$conversation['externalId']){
+        return false;
+    }
+    
+    // Find the SendMsg record using the reference value
+    $sendMsg = SendMsg::where('msg_id', $conversation['externalId'])->first();
 
-    // Add any additional processing or response as needed
+    
+    if ($sendMsg) {
+        // Insert a new SmsReport record
+        SmsReport::create([
+            'user_id' => $sendMsg->user_id,
+            'msg_id' => $sendMsg->id,
+            'destination' => $conversation['to'],
+            'status' => $conversation['status'],
+        ]);
 
-    return response()->json(['message' => 'Delivery report received and logged']);
+        Message::updateOrCreate([
+            'user_id' => $sendMsg->user_id,
+            'send_id' => $sendMsg->id,
+            'from' => $sendMsg->from,
+            'to' => $sendMsg->to,
+            'delivery_status' => $$conversation['to'],
+            'msg_id' => $sendMsg->msg_id,
+            'msg' => $sendMsg->msg,
+            'msg_price' => $sendMsg->msg_price,
+        ]);
+
+    }
+
+    return response('Callback received and processed.', 200);
 });
 
 Route::post('/vas', function (Request $request) {
         $payload = $request->json()->all();
-        
-        // {
-        //     "event": "smsDeliveryReport",
-        //     "message": null,
-        //     "conversation": {
-        //         "id": "b27c3882-27f7-472e-a5f4-b4b9198f148d",
-        //         "externalId": "3932971082364335582881",
-        //         "status": "delivered",
-        //         "reason": "Message delivered to handset",
-        //         "from": "Name",
-        //         "to": "2349037234281",
-        //         "units": 0.5,
-        //         "delivered_time": "2023-08-29T08:18:31.732Z",
-        //         "createdAt": "2023-08-29T08:18:28.576Z"
-        //     }
-        // }
-
+     
         // Extract data from the payload
-        $reference = $payload['reference'];
-        $deliveryDate = $payload['deliveryDate'];
-        $destinationMsisdn = $payload['destinationMsisdn'];
-        $statusCode = $payload['statusCode'];
-        $statusMessage = $payload['statusMessage'];
-
-
-        // Determine the delivery status
-        // if ($statusCode === '0' && $statusMessage === 'DELIVRD') {
-        //     $deliveryStatus = 'Delivered';
-        // } else {
-        //     $deliveryStatus = 'Not Delivered';
-        // }
+        $event = $payload['event'];
+        $message = $payload['message'];
+        $conversation = $payload['conversation'];
 
         
-
+        if(!$conversation['externalId']){
+            return false;
+        }
+        
         // Find the SendMsg record using the reference value
-        $sendMsg = SendMsg::where('msg_id', $reference)->first();
+        $sendMsg = SendMsg::where('msg_id', $conversation['externalId'])->first();
 
         
         if ($sendMsg) {
@@ -103,8 +110,8 @@ Route::post('/vas', function (Request $request) {
             SmsReport::create([
                 'user_id' => $sendMsg->user_id,
                 'msg_id' => $sendMsg->id,
-                'destination' => $destinationMsisdn,
-                'status' => $statusMessage,
+                'destination' => $conversation['to'],
+                'status' => $conversation['status'],
             ]);
 
             Message::updateOrCreate([
@@ -112,7 +119,7 @@ Route::post('/vas', function (Request $request) {
                 'send_id' => $sendMsg->id,
                 'from' => $sendMsg->from,
                 'to' => $sendMsg->to,
-                'delivery_status' => $statusMessage,
+                'delivery_status' => $$conversation['to'],
                 'msg_id' => $sendMsg->msg_id,
                 'msg' => $sendMsg->msg,
                 'msg_price' => $sendMsg->msg_price,

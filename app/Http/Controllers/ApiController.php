@@ -196,6 +196,20 @@ class ApiController extends Controller
         if ($response['success']) {
             $user->credit = $user->credit - $credit;
             $user->save();
+
+            if(isset($response['body'])){
+                $receipients = explode(',',$to);
+                $refs = $response['body'];
+                foreach ($refs as $key => $ref) {
+                    if($ref['status'] == 'success'){
+                        $getMesg = SendMsg::where('to',$receipients[$key])->latest()->first();
+                        if($getMesg){
+                            $getMesg->msg_id = $ref['response'];
+                            $getMesg->save();
+                        }
+                    }
+                }
+            }
             
             $userCredit = $user->credit;
             $low_balance = Setting::where('key', 'low_balance')->first();
