@@ -14,7 +14,8 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        '/vas'
+        '/vas',
+        '/ordlr'
     ];
 
     public function handle($request, Closure $next)
