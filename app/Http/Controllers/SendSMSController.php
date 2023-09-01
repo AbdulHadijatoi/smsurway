@@ -89,8 +89,16 @@ class SendSMSController extends Controller
             }
         }
 
+        $senderIds = OneRouteService::fetchChannels();
+        $channelName = '';
+        foreach ($senderIds as $sender) {
+            if($sender['id'] == $from){
+                $channelName = $sender['name'];
+            }
+        }
+
         SendMsg::create([
-            'from' => $from,
+            'from' => $channelName,
             'to' => $to,
             'msg' => $request->msg,
             'user_id' => auth()->user()->id,

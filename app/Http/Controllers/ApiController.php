@@ -148,6 +148,7 @@ class ApiController extends Controller
             ], 422);
         }
     }
+
     public function send(Request $request){
         // return $request->all();
         $user = JWTAuth::parseToken()->authenticate();
@@ -180,8 +181,16 @@ class ApiController extends Controller
             return response()->json(['error' => $validator->messages()], 403);
         }
 
+        $senderIds = OneRouteService::fetchChannels();
+        $channelName = '';
+        foreach ($senderIds as $sender) {
+            if($sender['id'] == $from){
+                $channelName = $sender['name'];
+            }
+        }
+
         SendMsg::create([
-            'from' => $from,
+            'from' => $channelName,
             'to' => $to,
             'msg' => $msg,
             'user_id' => $user->id,

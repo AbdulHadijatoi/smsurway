@@ -69,7 +69,9 @@
                                                 <select class="form-control" id="from" name="from" required>
                                                     <option disabled selected>Please select approved IDs</option>
                                                     @foreach ($senderIds as $channel)
-                                                        <option value="{{ $channel['id'] }}">{{ $channel['name'] }}</option>
+                                                        @if ($channel['name'] != 'INFOTEKPS ')
+                                                            <option value="{{ $channel['id'] }}">{{ $channel['name'] }}</option>    
+                                                        @endif
                                                     @endforeach
                                                 </select>
                                             </div>
