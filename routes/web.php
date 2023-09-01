@@ -11,6 +11,7 @@ use App\Http\Controllers\HollaTag;
 use App\Mail\CreditRequestEmail;
 use App\Http\Controllers\GsmController;
 use App\Http\Controllers\ContactUsController;
+use App\Http\Controllers\DeliveryReportController;
 use App\Http\Controllers\NewsLetterController;
 use App\Http\Controllers\ResellerController;
 use App\Http\Controllers\SendSMSController;
@@ -46,139 +47,7 @@ use Illuminate\Support\Facades\Log;
 */
 
 
-
-Route::post('/ordlr', function (Request $request) {
-    $payload = $request->json()->all();
-     
-    // Extract data from the payload
-    $event = $payload['event'];
-
-    if($event && $event == "lowUnitBalance"){
-        $balance = $payload['units'];
-        $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
-        if($getOneRouteBalance && $balance <= 40000){
-            $getOneRouteBalance->value = 1;
-            $getOneRouteBalance->save();
-        }
-    }
-    $message = $payload['message'];
-    $conversation = $payload['conversation'];
-
-    
-    if(!$conversation['externalId']){
-        return false;
-    }
-    // var_dump($payload);
-    // return;
-    // Find the SendMsg record using the reference value
-    $sendMsg = SendMsg::where('msg_id', $conversation['externalId'])->first();
-
-    
-    if ($sendMsg) {
-        // Insert a new SmsReport record
-        SmsReport::create([
-            'user_id' => $sendMsg->user_id,
-            'msg_id' => $sendMsg->id,
-            'destination' => $conversation['to'],
-            'status' => $conversation['status'],
-        ]);
-
-        Message::updateOrCreate([
-            'user_id' => $sendMsg->user_id,
-            'send_id' => $sendMsg->id,
-            'from' => $sendMsg->from,
-            'to' => $sendMsg->to,
-            'delivery_status' => $conversation['status'],
-            'msg_id' => $sendMsg->msg_id,
-            'msg' => $sendMsg->msg,
-            'msg_price' => $sendMsg->msg_price,
-        ]);
-
-    }
-
-    return response('Callback received and processed.', 200);
-});
-
-Route::post('/vas', function (Request $request) {
-        $payload = $request->json()->all();
-     
-        // Extract data from the payload
-        $event = $payload['event'];
-        $message = $payload['message'];
-        $conversation = $payload['conversation'];
-
-        
-        if(!$conversation['externalId']){
-            return false;
-        }
-        
-        // Find the SendMsg record using the reference value
-        $sendMsg = SendMsg::where('msg_id', $conversation['externalId'])->first();
-
-        
-        if ($sendMsg) {
-            // Insert a new SmsReport record
-            SmsReport::create([
-                'user_id' => $sendMsg->user_id,
-                'msg_id' => $sendMsg->id,
-                'destination' => $conversation['to'],
-                'status' => $conversation['status'],
-            ]);
-
-            Message::updateOrCreate([
-                'user_id' => $sendMsg->user_id,
-                'send_id' => $sendMsg->id,
-                'from' => $sendMsg->from,
-                'to' => $sendMsg->to,
-                'delivery_status' => $$conversation['to'],
-                'msg_id' => $sendMsg->msg_id,
-                'msg' => $sendMsg->msg,
-                'msg_price' => $sendMsg->msg_price,
-            ]);
-
-        }
-
-        return response('Callback received and processed.', 200);
-});
-
-
-
-Route::get('/testRoute', function (Request $request) {
-    return OneRouteService::fetchChannels()[0];
-    // return OneRouteService::sendSMS($request->message,$request->recipients,$request->from);
-});
-Route::get('/test_sms', function () {
-   
-
-    $response = NanoBoxSMS::sendSMS('This is test message from hadi. nanobox integration test','2349039000021');
-    // $url = 'https://vas.interconnectnigeria.com/nanobox/api/v1/sms/mt';
-    // // $url = 'https://transactional.smsurway.com.ng/vas';
-        
-    // $headers = [
-    //     'Content-Type' => 'application/json',
-    //     'Authorization' => 'Bearer NB_liveMjhBQ0NERUY2RjY2OTIzNUMxRjQyNDk5NTMwMDhFMTEzMEMxODlDODI4MDc3RUFDMEUyRDRGRUUyNDNFRkYyRQ==',
-    // ];
-    
-    // $payload = [
-    //     'sourceMsisdn' => 'INFOTEKPS',
-    //     'destinationMsisdn' => ['2349039000021'],
-    //     'allowDelivery' => true,
-    //     'messageContent' => 'This is test message from hadi. nanobox integration test',
-    //     'routeAuth' => [
-    //         'systemId' => 'DEB6FD9EF',
-    //     ],
-    // ];
-    
-    // $response = Http::withHeaders($headers)->post($url, $payload);
-    return $response;
-    if ($response->status() == 200) {
-        $responseData = $response->json();
-        return response()->json($responseData, 200);
-    } else {
-        return response()->json(['error' => 'Failed to send SMS'], $response->status());
-    }
-
-});
+Route::post('/ordlr', [DeliveryReportController::class, 'oneRouteReport']);
 
 Route::get('/', function () {
     // return view('auth.login');
