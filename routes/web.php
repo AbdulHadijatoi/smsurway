@@ -77,7 +77,7 @@ Route::post('/ordlr', function (Request $request) {
             'send_id' => $sendMsg->id,
             'from' => $sendMsg->from,
             'to' => $sendMsg->to,
-            'delivery_status' => $$conversation['to'],
+            'delivery_status' => $conversation['status'],
             'msg_id' => $sendMsg->msg_id,
             'msg' => $sendMsg->msg,
             'msg_price' => $sendMsg->msg_price,
