@@ -1,3 +1,6 @@
+@php
+    $is_low_balance = get_setting('oneroute_low_balance')?get_setting('oneroute_low_balance')->value:0;
+@endphp
 @extends('layouts.TableHeader')
 @if(auth()->user()->role=='admin')
 @section('title','Admin Dashboard')
@@ -6,7 +9,7 @@
 @endif
     @section('content')
         <div id="main-content">
-            <div class="block-header">
+            <div class="block-header @if (auth()->user()->role == 'admin' && $is_low_balance == 1) mb-0 @endif">
                 <div class="row clearfix">
                     <div class="col-md-6 col-sm-12">
                         <h2>Dashboards and Analytics</h2>
@@ -21,6 +24,16 @@
                     </div>
                 </div>
             </div>
+            
+            @if (auth()->user()->role == 'admin' && $is_low_balance == 1)
+                <form class="alert alert-danger mt-0" action="{{route('oneroute.low_balance')}}" method="POST">
+                    @csrf
+                    Low Admin Balance Notification
+                    <button type="submit" class="close" >
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </form>
+            @endif
 
             <div class="container-fluid">           
 
@@ -53,31 +66,22 @@
                                 @endif
                                     
                                 <div class="row clearfix">
-                                    <div class="col-lg-3 col-md-6">
-                                        <div class="card top_counter">
-                                            <div class="body">
-                                                <div class="icon text-info"><i class="fa fa-money"></i> </div>
-                                                <div class="content">
-                                                    @if (auth()->user()->role== 'admin')
-                                                        <div class="text">NanoBox Credit</div>
-                                                            <h5 class="number"id="adminBlnc">
-                                                                ₦   
-                                                                {{session('balance')}}
-                                                                {{-- {{number_format(session('balance'), 2)}} --}}
-                                                            </h5>
-                                                        </div>
-                                                    @else
+                                    @if (auth()->user()->role != 'admin')
+                                        <div class="col-lg-3 col-md-6">
+                                            <div class="card top_counter">
+                                                <div class="body">
+                                                    <div class="icon text-info"><i class="fa fa-money"></i> </div>
+                                                    <div class="content">
                                                         <div class="text">Credit</div>
-                                                            <h5 class="number">
-                                                                ₦   
-                                                                {{-- {{session('balance')}} --}}
-                                                                {{number_format(session('balance'), 2)}}
-                                                            </h5>
-                                                        </div>
-                                                    @endif
-                                            </div>                        
+                                                        <h5 class="number">
+                                                            ₦ 
+                                                            {{number_format(session('balance'), 2)}}
+                                                        </h5>
+                                                    </div>
+                                                </div>                        
+                                            </div>
                                         </div>
-                                    </div>
+                                    @endif
                                     <div class="col-lg-3 col-md-6">
                                         <div class="card top_counter">
                                             <div class="body">

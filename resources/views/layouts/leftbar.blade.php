@@ -29,11 +29,8 @@
                 <hr>
                 <h5>
                     <p id="blnc">
-                        ₦  
-                        @if(auth()->user()->role == 'admin')
-                            {{session('balance')}}
-                        {{-- @elseif (auth()->user()->role == 'user') --}}
-                        @else
+                        @if (auth()->user()->role != 'admin')
+                            ₦  
                             {{number_format(auth()->user()->credit, 2)}}
                             <a href="{{route('buy')}}" class="user-name border border-secondary m-1 credit"><strong>Add Credit</strong></a>
                         @endif

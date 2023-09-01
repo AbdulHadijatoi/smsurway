@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Notification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TransactionNotificationEmail;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use App\Services\NanoBoxSMS;
 use App\Services\OneRouteService;
@@ -51,6 +52,15 @@ Route::post('/ordlr', function (Request $request) {
      
     // Extract data from the payload
     $event = $payload['event'];
+
+    if($event && $event == "lowUnitBalance"){
+        $balance = $payload['units'];
+        $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
+        if($getOneRouteBalance && $balance <= 40000){
+            $getOneRouteBalance->value = 1;
+            $getOneRouteBalance->save();
+        }
+    }
     $message = $payload['message'];
     $conversation = $payload['conversation'];
 
@@ -314,13 +324,30 @@ Route::middleware(['auth','verified','role:reseller'])->group(function () {
  });
 // Group Middleware for Admin
 Route::middleware(['auth','verified','role:admin'])->group(function () {
+    Route::post('/oneroute-low-balance', function () {
+
+        $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
+        if($getOneRouteBalance){
+            $getOneRouteBalance->value = 0;
+            $getOneRouteBalance->save();
+        }
+        return redirect()->back();
+    })->name('oneroute.low_balance'); 
     Route::get('/home', function () { 
+        $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
         $day1 = Carbon::now()->subDays(1);
         $day30 = Carbon::now()->subDays(30);
         $count['address']= AddressBook::count();
         $count['day1']= Message::where('created_at', '>=', $day1)->count();
         $count['day30']= Message::where('created_at', '>=', $day30)->count();
-        return view('home',compact('count'));    
+        if($getOneRouteBalance){
+            $is_balance_low = $getOneRouteBalance->value;
+        }else{
+            $is_balance_low = "0";
+        }
+
+
+        return view('home',compact('count','is_balance_low'));
     })->name('home');
 
     // User Section
