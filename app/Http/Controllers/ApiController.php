@@ -98,7 +98,7 @@ class ApiController extends Controller
 
     public function report(Request $request){
         $user = JWTAuth::parseToken()->authenticate();
-        $product = $user->getreport()->get()->where('msg_id',$request->msgid)->first();
+        $product = $user->getreport()->where('msg_id',$request->msgid)->first();
         if (!$product) {
             return response()->json([
                 'success' => false,
