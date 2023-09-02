@@ -215,7 +215,7 @@ class ApiController extends Controller
                             $getMesg->msg_id = $ref['response'];
                             $getMesg->save();
                             $msg_ids['recipient'] = $receipients[$key];
-                            $msg_ids['msg_id'] = $ref['response'];
+                            $msg_ids['msg_id'] = $getMesg->id;
                         }
                     }
                 }
