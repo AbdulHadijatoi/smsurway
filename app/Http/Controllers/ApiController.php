@@ -152,10 +152,9 @@ class ApiController extends Controller
     public function send(Request $request,$sender = null){
         // return $request->all();
         $user = JWTAuth::parseToken()->authenticate();
-        $credentials = $request->only('from', 'to','msg','token');
+        $credentials = $request->only('to','msg','token');
         //valid credential
         $validator = Validator::make($credentials, [
-            'from' => 'required',
             'to' => 'required',
             'msg' => 'required|string|min:1|max:950',
         ]);
