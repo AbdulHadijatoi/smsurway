@@ -41,7 +41,7 @@ Route::group(['middleware' => ['jwt.verify']], function() {
     Route::get('get_user', [ApiController::class, 'get_user']);
     Route::get('credit', [ApiController::class, 'credit']);
     Route::post('fetch_senders', [ApiController::class, 'fetchSenders']);
-    Route::post('send', [ApiController::class, 'send']);
+    Route::post('send/{sender?}', [ApiController::class, 'send']);
     Route::get('report', [ApiController::class, 'report']);
     // Route::get('products/{id}', [ProductController::class, 'show']);
     // Route::post('create', [ProductController::class, 'store']);

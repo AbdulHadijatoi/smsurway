@@ -149,7 +149,7 @@ class ApiController extends Controller
         }
     }
 
-    public function send(Request $request){
+    public function send(Request $request,$sender = null){
         // return $request->all();
         $user = JWTAuth::parseToken()->authenticate();
         $credentials = $request->only('from', 'to','msg','token');
@@ -165,7 +165,7 @@ class ApiController extends Controller
             return response()->json(['error' => $validator->messages()], 200);
         }
         $to = $request->to;
-        $from = $request->from;
+        
         $msg = $request->msg;
         // Demo Code
         $count=$this->count_msg($request->msg);
@@ -181,12 +181,12 @@ class ApiController extends Controller
             return response()->json(['error' => $validator->messages()], 403);
         }
 
-        $senderIds = OneRouteService::fetchChannels();
-        $channelName = '';
-        foreach ($senderIds as $sender) {
-            if($sender['id'] == $from){
-                $channelName = $sender['name'];
-            }
+        if($sender && $sender == "oneotp"){
+            $channelId = "5e30e06f-b1b4-4feb-b974-cf071635254d";
+            $channelName = "OneOTP";
+        }else{
+            $channelId = "0ce6cb88-69b7-4c77-913f-64776082a975";
+            $channelName = "OneAlert";
         }
 
         SendMsg::create([
@@ -200,12 +200,12 @@ class ApiController extends Controller
             'sendtime' => now(),
         ]);
 
-        $response = OneRouteService::sendSMS($msg,$to,$from);
+        $response = OneRouteService::sendSMS($msg,$to,$channelId);
         
         if ($response['success']) {
+            $msg_ids = [];
             $user->credit = $user->credit - $credit;
             $user->save();
-
             if(isset($response['body'])){
                 $receipients = explode(',',$to);
                 $refs = $response['body'];
@@ -215,6 +215,8 @@ class ApiController extends Controller
                         if($getMesg){
                             $getMesg->msg_id = $ref['response'];
                             $getMesg->save();
+                            $msg_ids['recipient'] = $receipients[$key];
+                            $msg_ids['msg_id'] = $ref['response'];
                         }
                     }
                 }
@@ -235,11 +237,13 @@ class ApiController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'SMS created successfully',
+                'response' => $msg_ids,
             ], Response::HTTP_OK);
         }else{
             return response()->json([
                 'success' => false,
                 'message' => 'SMS not send. Check credentials and try again',
+                'response' => null,
             ], Response::HTTP_OK);
         }
 
