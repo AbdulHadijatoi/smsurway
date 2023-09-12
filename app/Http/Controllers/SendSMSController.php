@@ -99,6 +99,7 @@ class SendSMSController extends Controller
 
 
         $to_contacts = array_map('trim', array_unique(explode(',',$to)));
+        $msg_price = explode(",",$msg_price)[0];//pick only first price
 
         foreach ($to_contacts as $contact) {
             SendMsg::create([
