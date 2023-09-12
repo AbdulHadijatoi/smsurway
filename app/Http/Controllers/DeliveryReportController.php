@@ -26,7 +26,7 @@ class DeliveryReportController extends Controller
     
     public function oneRouteReport(Request $request){
         $payload = $request->json()->all();
-     
+        
         // Extract data from the payload
         $event = $payload['event'];
 
@@ -38,6 +38,7 @@ class DeliveryReportController extends Controller
                 $getOneRouteBalance->save();
             }
         }
+        
         $message = $payload['message'];
         $conversation = $payload['conversation'];
 
