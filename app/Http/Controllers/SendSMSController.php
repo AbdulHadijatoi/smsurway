@@ -97,21 +97,25 @@ class SendSMSController extends Controller
             }
         }
 
-        SendMsg::create([
-            'from' => $channelName,
-            'to' => $to,
-            'msg' => $request->msg,
-            'user_id' => auth()->user()->id,
-            'msg_type' => 0,
-            'msg_count' => $count,
-            'msg_price' => $msg_price,
-            'sendtime' => now(),
-        ]);
+
+        $to_contacts = array_map('trim', array_unique(explode(',',$to)));
+
+        foreach ($to_contacts as $contact) {
+            SendMsg::create([
+                'from' => $channelName,
+                'to' => $contact,
+                'msg' => $request->msg,
+                'user_id' => auth()->user()->id,
+                'msg_type' => 0,
+                'msg_count' => $count,
+                'msg_price' => $msg_price,
+                'sendtime' => now(),
+            ]);
+        }
 
         
         
         $response = OneRouteService::sendSMS($request->msg,$to,$from);
-        
         if ($response['success']) {
             $user->credit = $user->credit - $credit;
             $user->save();
@@ -122,6 +126,7 @@ class SendSMSController extends Controller
                 foreach ($refs as $key => $ref) {
                     if($ref['status'] == 'success'){
                         $getMesg = SendMsg::where('to',$receipients[$key])->latest()->first();
+
                         if($getMesg){
                             $getMesg->msg_id = $ref['response'];
                             $getMesg->save();
