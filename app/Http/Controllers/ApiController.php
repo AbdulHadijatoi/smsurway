@@ -183,9 +183,12 @@ class ApiController extends Controller
         if($sender && $sender == "oneotp"){
             $channelId = "5e30e06f-b1b4-4feb-b974-cf071635254d";
             $channelName = "OneOTP";
-        }else{
+        }else if($sender && $sender == "onealert"){
             $channelId = "0ce6cb88-69b7-4c77-913f-64776082a975";
             $channelName = "OneAlert";
+        }else if($sender && $sender == "traction"){
+            $channelId = "635b6642-0710-42ee-a2e4-b15ac4cd54f5";
+            $channelName = "Traction";
         }
 
         SendMsg::create([
