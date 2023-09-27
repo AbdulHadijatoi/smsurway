@@ -174,8 +174,8 @@ Route::get('/feed', function () {
 // Group Middleware for Reseller
 Route::middleware(['auth','verified','role:reseller'])->group(function () {
     Route::get('/home1', function () {
-        $day1 = Carbon::now()->subDays();
-        $day30 = Carbon::now()->subDays(30);
+        $day1 = Carbon::now()->subDays()->format("Y-m-d");
+        $day30 = Carbon::now()->subDays(30)->format("Y-m-d");
         $count['address']= AddressBook::count();
         $count['day1']= SmsReport::where('created_at', '>=', $day1)->count();
         $count['day30']= SmsReport::where('created_at', '>=', $day30)->count();
@@ -204,11 +204,13 @@ Route::middleware(['auth','verified','role:admin'])->group(function () {
     })->name('oneroute.low_balance'); 
     Route::get('/home', function () { 
         $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
-        $day1 = Carbon::now()->subDays(1);
-        $day30 = Carbon::now()->subDays(30);
+        $day1 = Carbon::now()->subDays(1)->format('Y-m-d');
+        $day30 = Carbon::now()->subDays(30)->format('Y-m-d');
+        // return $day30;
         $count['address']= AddressBook::count();
-        $count['day1']= Message::where('created_at', '>=', $day1)->count();
-        $count['day30']= Message::where('created_at', '>=', $day30)->count();
+        $count['day1']= SendMsg::whereDate('created_at', '>=', $day1)->count();
+        $count['day30']= SendMsg::whereDate('created_at', '>=', $day30)->count();
+        // return $count['day30'];
         if($getOneRouteBalance){
             $is_balance_low = $getOneRouteBalance->value;
         }else{
@@ -278,11 +280,12 @@ Route::middleware(['auth','verified'])->group(function () {
 });
 Route::middleware(['auth','verified','role:user'])->group(function () {
     Route::get('dashboard', function (){
-        $day1 = Carbon::now()->subDays(1);
-        $day30 = Carbon::now()->subDays(30);
+        $day1 = Carbon::now()->subDays(1)->format("Y-m-d");
+        // return $day1;
+        $day30 = Carbon::now()->subDays(30)->format("Y-m-d");
         $count['address']= AddressBook::where('user_id', auth()->user()->id)->count();
-        $count['day1']= Message::where('created_at', '>=', $day1)->where('user_id', auth()->user()->id)->get()->count();
-        $count['day30']= Message::where('created_at', '>=', $day30)->where('user_id', auth()->user()->id)->get()->count();
+        $count['day1']= SendMsg::whereDate('created_at', '>=', $day1)->where('user_id', auth()->user()->id)->get()->count();
+        $count['day30']= SendMsg::whereDate('created_at', '>=', $day30)->where('user_id', auth()->user()->id)->get()->count();
         return view('dashboard',compact('count')); 
     })->name('dashboard');
     Route::get('send', [UserController::class, 'send'])->name('send');
