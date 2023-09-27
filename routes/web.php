@@ -174,11 +174,11 @@ Route::get('/feed', function () {
 // Group Middleware for Reseller
 Route::middleware(['auth','verified','role:reseller'])->group(function () {
     Route::get('/home1', function () {
-        $day1 = Carbon::now()->subDays()->format("Y-m-d");
+        $day1 = Carbon::now()->subDays(1)->format("Y-m-d");
         $day30 = Carbon::now()->subDays(30)->format("Y-m-d");
         $count['address']= AddressBook::count();
-        $count['day1']= SmsReport::where('created_at', '>=', $day1)->count();
-        $count['day30']= SmsReport::where('created_at', '>=', $day30)->count();
+        $count['day1']= SmsReport::whereDate('created_at', '>=', $day1)->count();
+        $count['day30']= SmsReport::whereDate('created_at', '>=', $day30)->count();
         return view('home',compact('count'));    
     })->name('home1');
     // User Section
