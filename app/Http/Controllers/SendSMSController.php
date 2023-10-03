@@ -89,12 +89,20 @@ class SendSMSController extends Controller
             }
         }
 
-        $senderIds = OneRouteService::fetchChannels();
+        $senderIdsResponse = OneRouteService::fetchChannels();
         $channelName = '';
-        foreach ($senderIds as $sender) {
-            if($sender['id'] == $from){
-                $channelName = $sender['name'];
+
+        if (isset($senderIdsResponse['data'])) {
+            $senderIds = $senderIdsResponse['data'];
+            foreach ($senderIds as $sender) {
+                if($sender['id'] == $from){
+                    $channelName = $sender['name'];
+                }
             }
+        }else{
+            return back()->with(
+                'error','Failed to send sms, sender id not found!'
+            );
         }
 
 
