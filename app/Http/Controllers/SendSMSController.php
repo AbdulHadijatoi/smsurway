@@ -93,7 +93,7 @@ class SendSMSController extends Controller
         $channelName = '';
 
         if (isset($senderIdsResponse) && $senderIdsResponse) {
-            $senderIds = $senderIdsResponse['data'];
+            $senderIds = $senderIdsResponse;
             foreach ($senderIds as $sender) {
                 if($sender['id'] == $from){
                     $channelName = $sender['name'];
