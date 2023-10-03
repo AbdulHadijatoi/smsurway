@@ -92,7 +92,7 @@ class SendSMSController extends Controller
         $senderIdsResponse = OneRouteService::fetchChannels();
         $channelName = '';
 
-        if (isset($senderIdsResponse['data'])) {
+        if (isset($senderIdsResponse) && $senderIdsResponse) {
             $senderIds = $senderIdsResponse['data'];
             foreach ($senderIds as $sender) {
                 if($sender['id'] == $from){
