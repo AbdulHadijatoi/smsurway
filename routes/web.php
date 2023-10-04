@@ -213,10 +213,11 @@ Route::middleware(['auth','verified','role:admin'])->group(function () {
     
         // Calculate the start date
         $startDate = $currentDate->subDays($daysToSubtract)->format('Y-m-d');
-    
+        
         $numberOfDays = $currentDate->day;
         $count['address'] = AddressBook::count();
         $count['day30'] = SendMsg::whereDate('created_at', '>=', $startDate)->count();
+        return $count;
         
         if($getOneRouteBalance){
             $is_balance_low = $getOneRouteBalance->value;
@@ -298,7 +299,7 @@ Route::middleware(['auth','verified','role:user'])->group(function () {
     
         // Calculate the start date
         $startDate = $currentDate->subDays($daysToSubtract)->format('Y-m-d');
-
+        
         $numberOfDays = $currentDate->day;
         $count['day30'] = SendMsg::whereDate('created_at', '>=', $startDate)->where('user_id', auth()->user()->id)->count();
         
