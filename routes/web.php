@@ -217,7 +217,6 @@ Route::middleware(['auth','verified','role:admin'])->group(function () {
         $numberOfDays = $currentDate->day;
         $count['address'] = AddressBook::count();
         $count['day30'] = SendMsg::whereDate('created_at', '>=', $startDate)->count();
-        return $count;
         
         if($getOneRouteBalance){
             $is_balance_low = $getOneRouteBalance->value;
