@@ -208,8 +208,12 @@ Route::middleware(['auth','verified','role:admin'])->group(function () {
 
         $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
         $currentDate = Carbon::now();
+        // Calculate the number of days to subtract based on the day of the month
+        $daysToSubtract = $currentDate->day;
     
-        $startDate = $currentDate->format('Y-m-d');
+        // Calculate the start date
+        $startDate = $currentDate->subDays($daysToSubtract)->format('Y-m-d');
+    
         $numberOfDays = $currentDate->day;
         $count['address'] = AddressBook::count();
         $count['day30'] = SendMsg::whereDate('created_at', '>=', $startDate)->count();
@@ -290,7 +294,11 @@ Route::middleware(['auth','verified','role:user'])->group(function () {
         $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
         $currentDate = Carbon::now();
     
-        $startDate = $currentDate->format('Y-m-d');
+        $daysToSubtract = $currentDate->day;
+    
+        // Calculate the start date
+        $startDate = $currentDate->subDays($daysToSubtract)->format('Y-m-d');
+
         $numberOfDays = $currentDate->day;
         $count['day30'] = SendMsg::whereDate('created_at', '>=', $startDate)->where('user_id', auth()->user()->id)->count();
         
