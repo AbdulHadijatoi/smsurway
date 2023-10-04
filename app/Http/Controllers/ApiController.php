@@ -189,6 +189,12 @@ class ApiController extends Controller
         }else if($sender && $sender == "traction"){
             $channelId = "635b6642-0710-42ee-a2e4-b15ac4cd54f5";
             $channelName = "Traction";
+        }else{
+            return response()->json([
+                'success' => false,
+                'message' => 'SMS not send. SenderId not found!',
+                'response' => null,
+            ], Response::HTTP_OK);
         }
 
         SendMsg::create([
