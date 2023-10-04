@@ -203,20 +203,22 @@ Route::middleware(['auth','verified','role:admin'])->group(function () {
         return redirect()->back();
     })->name('oneroute.low_balance'); 
     Route::get('/home', function () { 
-        $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
         $day1 = Carbon::now()->subDays(1)->format('Y-m-d');
-        $day30 = Carbon::now()->subDays(30)->format('Y-m-d');
-        // return $day30;
-        $count['address']= AddressBook::count();
         $count['day1']= SendMsg::whereDate('created_at', '>=', $day1)->count();
-        $count['day30']= SendMsg::whereDate('created_at', '>=', $day30)->count();
-        // return $count['day30'];
+
+        $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
+        $currentDate = Carbon::now();
+    
+        $startDate = $currentDate->format('Y-m-d');
+        $numberOfDays = $currentDate->day;
+        $count['address'] = AddressBook::count();
+        $count['day30'] = SendMsg::whereDate('created_at', '>=', $startDate)->count();
+        
         if($getOneRouteBalance){
             $is_balance_low = $getOneRouteBalance->value;
-        }else{
+        } else {
             $is_balance_low = "0";
         }
-
 
         return view('home',compact('count','is_balance_low'));
     })->name('home');
@@ -281,11 +283,24 @@ Route::middleware(['auth','verified'])->group(function () {
 Route::middleware(['auth','verified','role:user'])->group(function () {
     Route::get('dashboard', function (){
         $day1 = Carbon::now()->subDays(1)->format("Y-m-d");
-        // return $day1;
-        $day30 = Carbon::now()->subDays(30)->format("Y-m-d");
+
         $count['address']= AddressBook::where('user_id', auth()->user()->id)->count();
-        $count['day1']= SendMsg::whereDate('created_at', '>=', $day1)->where('user_id', auth()->user()->id)->get()->count();
-        $count['day30']= SendMsg::whereDate('created_at', '>=', $day30)->where('user_id', auth()->user()->id)->get()->count();
+        $count['day1']= SendMsg::whereDate('created_at', '>=', $day1)->where('user_id', auth()->user()->id)->count();
+        
+        $getOneRouteBalance = Setting::where('key', 'oneroute_low_balance')->first();
+        $currentDate = Carbon::now();
+    
+        $startDate = $currentDate->format('Y-m-d');
+        $numberOfDays = $currentDate->day;
+        $count['day30'] = SendMsg::whereDate('created_at', '>=', $startDate)->where('user_id', auth()->user()->id)->count();
+        
+        if($getOneRouteBalance){
+            $is_balance_low = $getOneRouteBalance->value;
+        } else {
+            $is_balance_low = "0";
+        }
+        
+        
         return view('dashboard',compact('count')); 
     })->name('dashboard');
     Route::get('send', [UserController::class, 'send'])->name('send');
