@@ -39,8 +39,7 @@ class UserController extends Controller
         return view('user.send',compact('address', 'senderIds'));
     }
     
-    public function report()
-    {
+    public function report(){
         $user = Auth::user();
         $role = $user->role;
 
@@ -73,22 +72,83 @@ class UserController extends Controller
         return view('user.report', compact('report'));
     }
     
-    public function reportMonth()
-    {
+    public function reportMonth(){
+        return view('user.report');
+    }
+
+    public function getReportData(Request $request){
+      
+        // Page Length
+        $pageNumber = ( $request->start / $request->length )+1;
+        $pageLength = $request->length;
+        $skip       = ($pageNumber-1) * $pageLength;
+
+        // Page Order
+        $orderColumnIndex = $request->order[0]['column'] ?? '0';
+        $orderBy = $request->order[0]['dir'] ?? 'desc';
+
+        // get data from products table
         $user = Auth::user();
         $role = $user->role;
 
-        $month = Carbon::now()->subDays(30);
+        $currentDate = Carbon::now();
+        $daysToSubtract = $currentDate->day;
+    
+        $startDate = $currentDate->subDays($daysToSubtract)->format('Y-m-d');
         
-        $query = SendMsg::with('user')->whereDate('created_at', '>=', $month)->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id');
+        $query = SendMsg::with('user')->whereDate('created_at', '>=', $startDate)->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id');
         
         if ($role != 'admin') {
             $query->where('user_id', $user->id);
         }
 
-        $report = $query->get();
+        // Search
+        $search = $request->search;
+        $query = $query->where(function($query) use ($search){
+            $query->orWhere('from', 'like', "%".$search."%");
+            $query->orWhere('to', 'like', "%".$search."%");
+            $query->orWhere('msg', 'like', "%".$search."%");
+            $query->orWhereHas('user', function($q) use ($search){
+                $q->where('name', 'like', "%".$search."%");
+            });
+        });
 
-        return view('user.report', compact('report'));
+        
+        $query = $query->orderBy('created_at', 'desc');
+        $recordsFiltered = $query->count();
+        $data = $query->skip($skip)->take($pageLength)->get();
+
+        $formattedData = $data->map(function ($report, $index) {
+            $datework = Carbon::createFromDate($report->created_at);
+            $now = Carbon::now();
+            $testdate = $datework->diffInDays($now);
+            $diff = Carbon::parse($report->created_at)->diffInDays(Carbon::now());
+
+            $report->index = $index;
+            $report->user_name = $report->user ? $report->user->name : '-';
+            $report->created_date = $report->created_at->diffForHumans() ?? '-';
+            $report->from = $report->from ?? "-";
+            $report->msg_count = $report->msg_count ?? '-';
+            $report->message = \Illuminate\Support\Str::limit($report->msg, 50, $end = '...');
+
+            $report->view_report = Auth::user()->role === 'admin' ? 
+            route('getReportDetail', ['send_id' => $report->id, 'msg' => $report->msg, 'from' => $report->from]) :
+            route('reportDetail', ['send_id' => $report->id, 'msg' => $report->msg, 'from' => $report->from]);
+
+            $report->message_button = '<button type="button" class="btn btn-sm" data-toggle="popover" title="Message" data-content="' . $report->msg . '">' .
+                            \Illuminate\Support\Str::limit($report->msg, 50, $end='...') .
+                            '</button>';
+            
+            return $report;
+        });
+
+        return response()->json([
+            "draw" => $request->draw,
+            "recordsTotal" => $recordsFiltered,
+            "recordsFiltered" => $recordsFiltered,
+            'data' => $formattedData,
+        ], 200);
+
     }
     
     public function reportDetail(Request $request)

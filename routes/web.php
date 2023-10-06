@@ -268,6 +268,7 @@ Route::middleware(['auth','verified','role:admin'])->group(function () {
     Route::get('get-report', [UserController::class, 'report'])->name('report');
     Route::get('get-report/today', [UserController::class, 'reportDay'])->name('report.today');
     Route::get('get-report/month', [UserController::class, 'reportMonth'])->name('report.thisMonth');
+    Route::get('get-report-data', [UserController::class, 'getReportData'])->name('report.getData');
     Route::get('getReportDetail', [UserController::class, 'reportDetail'])->name('getReportDetail');
     
 

@@ -29,57 +29,37 @@
                         </div>
                         <div class="body">
                             <div class="table-responsive">
-                                <table class="table table-bordered table-striped table-hover dataTable js-exportable">
+                                <table id="datatable" class="table table-bordered table-striped table-hover dataTable ">
                                     <thead>
                                         <tr>
                                             <th>#</th>
-                                            @if(Auth::user()->role === 'admin')
+                                            {{-- @if(Auth::user()->role === 'admin') --}}
                                                 <th>User</th>
-                                            @endif
+                                            {{-- @endif --}}
                                             <th>Date/Time</th>
                                             <th>Sender</th>
-                                            {{-- <th>Destination</th> --}}
                                             <th>Limit Count</th>
                                             <th>SMS</th>
                                             <th>Detail</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @php
-                                            use Carbon\Carbon;
-                                            $date = "2016-09-16 11:00:00";
-                                        @endphp
-                                        @foreach($report->sortByDesc('id') as $r)
-                                        @php
-                                            $datework = Carbon::createFromDate($r->created_at);
-                                            $now = Carbon::now();
-                                            $testdate = $datework->diffInDays($now);
-                                            $diff = Carbon::parse($r->created_at)->diffInDays(Carbon::now());
-                                        @endphp
-                                        <tr data-status="{{$diff==10}}">
-                                            <td> {{$loop->iteration}}</td>
+
+
+                                        {{-- <td>
+                                            <button type="button" class="btn btn-sm" data-toggle="popover" title="Message" data-content="{{ $r->msg }}">
+                                                {{ \Illuminate\Support\Str::limit($r->msg, 50, $end='...') }}
+                                            </button> 
+                                        </td>
+                                        <td>
                                             @if(Auth::user()->role === 'admin')
-                                                <td> {{$r->user?$r->user->name:'-' }}</td>
+                                            <a href="{{ route('getReportDetail', ['send_id' => $r->id, 'msg' => $r->msg, 'from' => $r->from]) }}">View Report</a>
+                                            @else
+                                            <a href="{{ route('reportDetail', ['send_id' => $r->id, 'msg' => $r->msg, 'from' => $r->from]) }}">View Report</a>
                                             @endif
-                                            <td>
-                                                {{$r->created_at->diffForHumans()}}
-                                            </td>
-                                            <td> {{$r->from}}</td>
-                                            <td> {{$r->msg_count}}</td> 
-                                            <td>
-                                                <button type="button" class="btn btn-sm" data-toggle="popover" title="Message" data-content="{{ $r->msg }}">
-                                                    {{ \Illuminate\Support\Str::limit($r->msg, 50, $end='...') }}
-                                                </button> 
-                                            </td>
-                                            <td>
-                                                @if(Auth::user()->role === 'admin')
-                                                <a href="{{ route('getReportDetail', ['send_id' => $r->id, 'msg' => $r->msg, 'from' => $r->from]) }}">View Report</a>
-                                                @else
-                                                <a href="{{ route('reportDetail', ['send_id' => $r->id, 'msg' => $r->msg, 'from' => $r->from]) }}">View Report</a>
-                                                @endif
-                                            </td> 
-                                        </tr>
-                                        @endforeach
+                                        </td>  --}}
+
+
                                     </tbody>
                                 </table>
                             </div>
@@ -90,6 +70,63 @@
         </div>
     </div>    
     @section('JavaScript')
+    <script>
+        var userData = @json(Auth::user()->role);
+    </script>
+    <script>
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+        $(document).ready(function() {
+            $('#datatable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "{{ route('report.getData') }}",
+                    type: "GET",
+                    data: function (data) {
+                        data.search = $('input[type="search"]').val();
+                    }
+                },
+                order: ['1', 'DESC'],
+                pageLength: 10,
+                searching: true,
+                aoColumns: [
+                    {
+                        data: 'index',
+                    },
+                    {
+                        data: 'user_name',
+                    },
+                    {
+                        data: 'created_date',
+                    },
+                    {
+                        data: 'from',
+                    },
+                    {
+                        data: 'msg_count',
+                    },
+                    {
+                        data: 'message_button', // Use the new 'message_button' field
+                        title: 'Message',
+                    },
+                    {
+                        data: 'view_report', // Use the new 'view_report' field
+                        title: 'View Report',
+                        render: function(data, type, row) {
+                            return '<a href="' + data + '">View Report</a>';
+                        }
+                
+                    }
+                ]
+            });
+        });
+
+        
+    </script>
     <script>
         // ADD JS for filter Data.
         $(document).ready(function () {
