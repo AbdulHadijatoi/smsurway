@@ -107,7 +107,7 @@
                         data: 'from',
                     },
                     {
-                        data: 'msg_count',
+                        data: 'sms_count',
                     },
                     {
                         data: 'message_button', // Use the new 'message_button' field

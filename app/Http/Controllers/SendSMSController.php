@@ -109,6 +109,7 @@ class SendSMSController extends Controller
         $to_contacts = array_map('trim', array_unique(explode(',',$to)));
         $msg_price = explode(",",$msg_price)[0];//pick only first price
 
+        $randomString = Str::random(12);
         foreach ($to_contacts as $contact) {
             SendMsg::create([
                 'from' => $channelName,
@@ -117,6 +118,7 @@ class SendSMSController extends Controller
                 'user_id' => auth()->user()->id,
                 'msg_type' => 0,
                 'msg_count' => $count,
+                'sms_stamp' => $randomString,// for grouping the delivery report and counting total sms sent in one group
                 'msg_price' => $msg_price,
                 'sendtime' => now(),
             ]);

@@ -196,6 +196,8 @@ class ApiController extends Controller
                 'response' => null,
             ], Response::HTTP_OK);
         }
+        
+        $randomString = Str::random(12);
 
         SendMsg::create([
             'from' => $channelName,
@@ -204,6 +206,7 @@ class ApiController extends Controller
             'user_id' => $user->id,
             'msg_type' => 0,
             'msg_count' => $count,
+            'sms_stamp' => $randomString,// for grouping the delivery report and counting total sms sent in one group
             'msg_price' => $msg_price,
             'sendtime' => now(),
         ]);

@@ -43,7 +43,13 @@ class UserController extends Controller
         $user = Auth::user();
         $role = $user->role;
 
-        $query = SendMsg::with('user')->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id');
+        //$query = SendMsg::with('user')->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id');
+        
+        \DB::statement("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
+
+        $query = SendMsg::with('user')
+                ->groupBy('sms_stamp')
+                ->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id', \DB::raw('COUNT(*) as sms_count')); 
         
         if ($role != 'admin') {
             $query->where('user_id', $user->id);
@@ -61,8 +67,14 @@ class UserController extends Controller
 
         $day = Carbon::now()->subDays();
         
-        $query = SendMsg::with('user')->whereDate('created_at', '>=' ,$day)->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id');
-        
+        //$query = SendMsg::with('user')->whereDate('created_at', '>=' ,$day)->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id');
+        \DB::statement("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
+
+        $query = SendMsg::with('user')
+                ->whereDate('created_at', '>=' ,$day)
+                ->groupBy('sms_stamp')
+                ->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id', \DB::raw('COUNT(*) as sms_count')); 
+                
         if ($role != 'admin') {
             $query->where('user_id', $user->id);
         }
@@ -96,7 +108,15 @@ class UserController extends Controller
     
         $startDate = $currentDate->subDays($daysToSubtract)->format('Y-m-d');
         
-        $query = SendMsg::with('user')->whereDate('created_at', '>=', $startDate)->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id');
+        // $query = SendMsg::with('user')->whereDate('created_at', '>=', $startDate)->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id');
+        \DB::statement("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
+
+        $query = SendMsg::with('user')
+                ->whereDate('created_at', '>=', $startDate)
+                ->groupBy('sms_stamp')
+                ->select('created_at', 'from', 'msg', 'msg_count', 'id','user_id','sms_stamp', \DB::raw('COUNT(*) as sms_count')); 
+
+
         
         if ($role != 'admin') {
             $query->where('user_id', $user->id);
@@ -129,11 +149,12 @@ class UserController extends Controller
             $report->created_date = $report->created_at->diffForHumans() ?? '-';
             $report->from = $report->from ?? "-";
             $report->msg_count = $report->msg_count ?? '-';
+            $report->sms_stamp = $report->sms_stamp;
             $report->message = \Illuminate\Support\Str::limit($report->msg, 50, $end = '...');
 
             $report->view_report = Auth::user()->role === 'admin' ? 
-            route('getReportDetail', ['send_id' => $report->id, 'msg' => $report->msg, 'from' => $report->from]) :
-            route('reportDetail', ['send_id' => $report->id, 'msg' => $report->msg, 'from' => $report->from]);
+            route('getReportDetail', ['send_id' => $report->sms_stamp, 'msg' => $report->msg, 'from' => $report->from]) :
+            route('reportDetail', ['send_id' => $report->sms_stamp, 'msg' => $report->msg, 'from' => $report->from]);
 
             $report->message_button = '<button type="button" class="btn btn-sm" data-toggle="popover" title="Message" data-content="' . $report->msg . '">' .
                             \Illuminate\Support\Str::limit($report->msg, 50, $end='...') .
@@ -151,13 +172,32 @@ class UserController extends Controller
 
     }
     
-    public function reportDetail(Request $request)
-    {
+    // public function reportDetail(Request $request)
+    // {
+    //     $from = $request->from;
+    //     $msg = $request->msg;
+    //     $report = Message::where('send_id', $request->send_id)->get(['created_at','to','msg','msg_count','msg_price','delivery_status']);
+    //     return view('user.reportDetail',compact('report','from','msg'));
+    // }
+    
+    public function reportDetail(Request $request) {
         $from = $request->from;
         $msg = $request->msg;
-        $report = Message::where('send_id', $request->send_id)->get(['created_at','to','msg','msg_count','msg_price','delivery_status']);
+        
+        $sms_stamp = $request->send_id;
+
+        $smsReports = SendMsg::where('sms_stamp', $sms_stamp)->get(['id']);
+
+        if ($smsReports->isNotEmpty()) {
+            $report_ids = $smsReports->pluck('id')->toArray();
+        } else {
+            $report_ids = [];
+        }
+        
+        $report = Message::whereIn('send_id', $report_ids)->get(['created_at','to','msg','msg_count','msg_price','delivery_status']);
         return view('user.reportDetail',compact('report','from','msg'));
     }
+    
     public function voicecall()
     {
         $report= SmsReport::where('user_id', auth()->user()->id) ->join('send_msgs', 'sms_reports.msg_id', '=', 'send_msgs.id')->orderBy('sms_reports.id','desc')->get();

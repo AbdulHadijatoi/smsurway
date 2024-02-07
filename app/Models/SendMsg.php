@@ -20,6 +20,7 @@ class SendMsg extends Model
         'msg_id',
         'limit',
         'user_id',
+        'sms_stamp',
         'sendtime',
         'msg_count',
         'is_scheduled',
