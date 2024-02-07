@@ -114,6 +114,7 @@ class AdminController extends Controller
             $user->mobile = $request->mobile;
             $user->country = $request->country;
             $user->role = $request->role;
+            $user->per_sms_bill = $request->per_sms_bill;
             $user->status = $request->status;
             $user->reseller_id = $reseller;
             $user->save();

@@ -58,6 +58,7 @@
                                             <th>Email</th>
                                             <th>Credit</th>
                                             <th>Mobile</th>
+                                            <th>Per SMS Bill</th>
                                             <th>Role/ Status</th>
                                             <th>Action</th>
                                         </tr>
@@ -70,6 +71,7 @@
                                                 <td style="text-transform: none;"> {{$u->email}} </td> 
                                                 <td> {{$u->credit}} </td>
                                                 <td> {{$u->mobile}} </td>
+                                                <td> {{$u->per_sms_bill}} </td>
                                                 <td class="text-capitalize">
                                                     @if($u->role=="reseller")
                                                         <span class="badge badge-info">{{$u->role}}</span>

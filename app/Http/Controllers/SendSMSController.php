@@ -123,8 +123,6 @@ class SendSMSController extends Controller
                 'sendtime' => now(),
             ]);
         }
-
-        
         
         $response = OneRouteService::sendSMS($request->msg,$to,$from);
         if ($response['success']) {
@@ -199,6 +197,7 @@ class SendSMSController extends Controller
     }
     
     public function count_credit($to,$count,$user_id = null){
+        $user = auth()->user();
         $mtn=[];
         $glo=[];
         $airtel=[];
@@ -227,6 +226,7 @@ class SendSMSController extends Controller
                 array_push($unknown,'Unknown Network.'); 
             }
         }
+        
         if ($user_id !==null){
             $arPrice=GsmNetwork::where('network_name','AirTel')->where('user_id', $user_id)->first()->network_price;
             $mtPrice=GsmNetwork::where('network_name','MTN')->where('user_id', $user_id)->first()->network_price;
@@ -290,6 +290,9 @@ class SendSMSController extends Controller
         $response=[];
         $response['send']=$to;
         $response['msg_price']=$msg_price;
+        if($user->per_sms_bill){
+            $response['msg_price'] = $user->per_sms_bill;
+        }
         $response['credit']=$credit;
         return $response;
     }

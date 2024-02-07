@@ -23,6 +23,7 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'username',
         'country',
+        'per_sms_bill',
         'mobile',
         'reseller_id'
     ];

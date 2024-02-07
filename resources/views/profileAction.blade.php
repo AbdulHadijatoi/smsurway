@@ -75,6 +75,10 @@
                                                 <option value="user" @if($user->role == 'user') selected @endif>User</option>
                                             </select>
                                         </div>
+                                        <div class="form-group">
+                                            <label for="per_sms_bill" class="control-label sr-only">Per SMS Bill</label>
+                                            <input type="number" class="form-control" id="per_sms_bill" min="0.0" step="any" name="per_sms_bill" value="{{ $user->per_sms_bill }}" placeholder="Per SMS Bill">
+                                        </div>
                                         <div class="input-group mb-3">
                                             <label for="status" class="control-label sr-only">Status*</label>
                                             <select class="custom-select" id="inputGroupSelect01" name="status" required>
