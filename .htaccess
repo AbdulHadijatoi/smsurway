@@ -1,0 +1,3 @@
+RewriteEngine On
+RewriteCond %{HTTP_HOST} !^smsurway.com.ng$
+RewriteRule ^(.*)$ https://www.smsurway.com.ng/$1 [R=301,L]

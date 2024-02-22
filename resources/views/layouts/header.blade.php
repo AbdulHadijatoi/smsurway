@@ -6,7 +6,7 @@
         <meta http-equiv="X-UA-Compatible" content="IE=Edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
         <meta name="meta_name" content="@yield('meta_name')">
-        <meta name="meta_description" content="@yield('meta_description')">
+        <meta name="description" content="Elevate your online security with our OTP SMS for Verification in Nigeria. Instant, customizable, and seamless integration for secure transactions.">
         <link rel="canonical" href="@yield('canonical')" />
         <link rel="alternate" hreflang="x-default" href="@yield('canonical')" />
         <link rel="alternate" hreflang="en" href="@yield('canonical')" />
