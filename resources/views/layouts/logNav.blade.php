@@ -12,11 +12,3 @@
     </h5>
     <img src="{{asset('assets/images/1656167780804.png')}}" alt="Welcome to OTP SMS for Verification in Nigeria" style="width:350px;height:200px">
 </div>
-
-<style>
-    @media screen and (max-width 768px){
-        .sm-text-white{
-            color: white !important;
-        }
-    }
-</style>
