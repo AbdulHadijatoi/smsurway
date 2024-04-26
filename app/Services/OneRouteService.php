@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use Illuminate\Support\Facades\Http;
 
 class OneRouteService
@@ -25,7 +26,12 @@ class OneRouteService
         ];
 
         // return $payload;
-        $response = Http::withHeaders($headers)->post($url, $payload);
+        try{
+
+            $response = Http::withHeaders($headers)->post($url, $payload);
+        }catch(Exception $e){
+            return response()->json($e->getMessage(), 422);
+        }
 
         
         if ($response->status() == 200) {
@@ -33,7 +39,7 @@ class OneRouteService
 
             return $responseData;
         } else {
-            return response()->json(['error' => 'Failed to send SMS'], $response->status());
+            return response()->json(['error' => 'Failed to send SMS'], 422);
         }
     }
     

@@ -19,99 +19,33 @@ use App\Services\OneRouteService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 
-class ApiController extends Controller
-{
-
-    public function authenticate(Request $request)
-    {
-        $credentials = $request->only('email', 'password');
-
-        //valid credential
-        $validator = Validator::make($credentials, [
-            'email' => 'required|email',
-            'password' => 'required|string|min:6|max:50'
-        ]);
-
-        //Send failed response if request is not valid
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->messages()], 200);
-        }
-        //Request is validated
-        //Crean token
-        try {
-            if (! $token = JWTAuth::attempt($credentials)) {
-                return response()->json([
-                	'success' => false,
-                	'message' => 'Login credentials are invalid.',
-                ], 400);
-            }
-        } catch (JWTException $e) {
-    	return $credentials;
-            return response()->json([
-                	'success' => false,
-                	'message' => 'Could not create token.',
-                ], 500);
-        }
- 	
- 		//Token created, return with success response and jwt token
-        return response()->json([
-            'success' => true,
-            'token' => $token,
-        ]);
-    }
- 
-    public function logout(Request $request)
-    {
-        //valid credential
-        $validator = Validator::make($request->only('token'), [
-            'token' => 'required'
-        ]);
-
-        //Send failed response if request is not valid
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->messages()], 200);
-        }
-
-		//Request is validated, do logout        
-        try {
-            JWTAuth::invalidate($request->token);
- 
-            return response()->json([
-                'success' => true,
-                'message' => 'User has been logged out'
-            ]);
-        } catch (JWTException $exception) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Sorry, user cannot be logged out'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
+class V2ApiController extends Controller {
  
     public function get_user(Request $request){
-        $this->validate($request, [
-            'token' => 'required'
-        ]);
-        $user = JWTAuth::authenticate($request->token);
+        $user = auth()->user();
         return response()->json(['credit' => $user->credit]);
     }
 
-    public function report(Request $request){
-        $user = JWTAuth::parseToken()->authenticate();
-        $product = $user->getReport()->where('msg_id',$request->msgid)->first();
-        if (!$product) {
+    public function getDeliveryReport(Request $request){
+        $user = auth()->user();
+        $report = $user->getReport()->where('msg_id',$request->msgid)->first();
+
+        if (!$report) {
             return response()->json([
-                'success' => false,
-                'message' => 'Sorry, report not found.'
+                'status' => false,
+                'message' => 'Message delivery report not found.'
             ], 400);
         }
+
         return response()->json([
-            'status' => $product->status
+            'status' => true,
+            'message_status' => $report->status
         ]);
     }
 
     public function credit(){
-        $user = JWTAuth::parseToken()->authenticate();
+        $user = auth()->user();
+
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -119,9 +53,9 @@ class ApiController extends Controller
             ], 400);
         }
         return response()->json([
+            'success' => true,
             'credit' => $user->credit
         ]);
-        return $user;
     }
     
     public function fetchSenders(Request $request){
@@ -140,7 +74,7 @@ class ApiController extends Controller
             return response()->json([
                 'success' => true,
                 'senders' => $channels,
-            ], Response::HTTP_OK);
+            ], 200);
         }else{
             return response()->json([
                 'success' => false,
@@ -149,9 +83,10 @@ class ApiController extends Controller
         }
     }
 
-    public function send(Request $request,$sender = null){
+    public function sendMessage(Request $request){
         // return $request->all();
-        $user = JWTAuth::parseToken()->authenticate();
+        $sender_channel = $request->sender_channel;
+        $user = auth()->user();
         $credentials = $request->only('to','msg','token');
         //valid credential
         $validator = Validator::make($credentials, [
@@ -163,38 +98,38 @@ class ApiController extends Controller
         if ($validator->fails()) {
             return response()->json(['error' => $validator->messages()], 200);
         }
+
         $to = $request->to;
         
         $msg = $request->msg;
-        // Demo Code
+
         $count=$this->count_msg($request->msg);
         $to = Str::of($to)->replaceMatches('/[^A-Za-z0-9]++/', ',');
         $msg_price=$this->count_credit($to,$count);
         $credit=$msg_price['credit'];
         $to=$msg_price['send'];
         $msg_price=$msg_price['msg_price'];
-        // $user->credit;
+
         $usercredit=$user->credit;
 
         if($usercredit<$credit){
             return response()->json(['error' => $validator->messages()], 403);
         }
 
-        if($sender && $sender == "oneotp"){
+        if($sender_channel && $sender_channel == "oneotp"){
             $channelId = "5e30e06f-b1b4-4feb-b974-cf071635254d";
             $channelName = "OneOTP";
-        }else if($sender && $sender == "onealert"){
+        }else if($sender_channel && $sender_channel == "onealert"){
             $channelId = "0ce6cb88-69b7-4c77-913f-64776082a975";
             $channelName = "OneAlert";
-        }else if($sender && $sender == "traction"){
+        }else if($sender_channel && $sender_channel == "traction"){
             $channelId = "635b6642-0710-42ee-a2e4-b15ac4cd54f5";
             $channelName = "Traction";
         }else{
             return response()->json([
                 'success' => false,
-                'message' => 'SMS not send. SenderId not found!',
-                'response' => null,
-            ], Response::HTTP_OK);
+                'message' => "Couldn't send the message, invalid sender channel!",
+            ], 200);
         }
         
         $randomString = Str::random(12);
@@ -237,7 +172,7 @@ class ApiController extends Controller
             $low_balance = Setting::where('key', 'low_balance')->first();
             if($low_balance){
                 if($userCredit < $low_balance->value && $user->low_balance != 1){
-                    //send email for low balance notification
+
                     Mail::to($user->email)->send(new LowBalanceNotificationEmail(
                         $user->name
                     ));
@@ -249,17 +184,16 @@ class ApiController extends Controller
                 'success' => true,
                 'message' => 'SMS created successfully',
                 'response' => $msg_ids,
-            ], Response::HTTP_OK);
+            ], 200);
         }else{
             return response()->json([
                 'success' => false,
                 'message' => 'SMS not send. Check credentials and try again',
                 'response' => null,
-            ], Response::HTTP_OK);
+            ], 200);
         }
 
     }
-
 
     public function filter_keyword($msg){
         $msg = str_replace('.', ' ', $msg);
@@ -274,6 +208,7 @@ class ApiController extends Controller
         $filter=$collection1->intersect($key_arr);
         return $filter;
     }
+
     public function count_msg($msg){
         $char=strlen($msg);
         $count=1;
